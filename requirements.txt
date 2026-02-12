@@ -1,0 +1,22 @@
+# Web & API
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Database & Vector Store
+sqlalchemy[asyncio]==2.0.25
+asyncpg==0.29.0
+pgvector==0.2.4
+
+# Task Queue
+celery[redis]==5.3.6
+redis==5.0.1
+
+# AI & External Tools
+openai==1.10.0
+# tavily-python  <-- We will use raw requests or httpx for now to keep it explicit
+
+# Utilities
+python-dotenv==1.0.0
+httpx==0.26.0
