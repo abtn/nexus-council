@@ -37,8 +37,8 @@ class ArchitectService:
         raw_content = await self.llm.generate(
             prompt=f"Design a council for this topic: {prompt}",
             system_prompt=system_prompt,
-            tier="pro", # This now maps to deepseek-v3.1
-            json_mode=False # Relying on prompt instructions for JSON
+            model_id=settings.MODEL_ARCHITECT, # <--- Dynamic Selection
+            json_mode=False
         )
 
         # Clean the response (remove potential markdown formatting)
