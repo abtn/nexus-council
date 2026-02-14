@@ -1,4 +1,4 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncAttrs # <--- 1. Import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase
 from .config import get_settings
 
@@ -14,7 +14,8 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
-class Base(DeclarativeBase):
+# 2. Add AsyncAttrs to the class definition
+class Base(AsyncAttrs, DeclarativeBase): 
     pass
 
 async def get_db() -> AsyncSession:
