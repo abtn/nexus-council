@@ -6,26 +6,65 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/nexus_council"
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # --- API KEYS ---
+    # --- API KEYS (Loaded from .env) ---
     TAVILY_API_KEY: str
     AVALAI_API_KEY: str
     OPENROUTER_API_KEY: str
     CF_ACCOUNT_ID: str
     CF_API_TOKEN: str
 
-    # --- AVALAI CONFIG ---
+    # --- API CONFIGS ---
     AVALAI_BASE_URL: str = "https://api.avalai.ir/v1"
 
-    # --- ROLE-BASED MODEL MAPPING (DEV MODE: FREE/CHEAP MODELS) ---
-    # Architect needs JSON structure, Gemini is good for this.
-    MODEL_ARCHITECT: str = "avalai/google/gemini-flash-lite-latest" 
+    # =========================================================
+    #  MODEL REGISTRY (Centralized List of Available Models)
+    # =========================================================
     
-    # Hunter/Analyst needs to read text fast. Llama 3.1 8b on Cloudflare is great.
-    MODEL_HUNTER_QUERY: str = "avalai/google/gemini-flash-lite-latest"
-    MODEL_ANALYST: str = "cloudflare/@cf/meta/llama-3.1-8b-instruct"
+    # --- AVALAI (Free / Almost Free Tier) ---
+    # Google's latest efficient models
+    MDL_GEMMA_3_27B: str = "avalai/gemma-3-27b-it"
+    MDL_GEMMA_3_12B: str = "avalai/gemma-3-12b-it"
     
-    # Moderator needs to synthesize. Gemini Flash Lite has a good context window.
-    MODEL_MODERATOR: str = "avalai/google/gemini-flash-lite-latest"
+    # NVIDIA NIM (Highly optimized, great reasoning)
+    MDL_NEMOTRON_70B: str = "avalai/nvidia_nim.llama-3.3-nemotron-super-49b-v1.5"
+    MDL_QWEN_THINKING: str = "avalai/nvidia_nim.qwen3-next-80b-a3b-thinking"
+    
+    # Ultra-Cheap / Fast
+    MDL_GPT_NANO: str = "avalai/gpt-5-nano"
+    MDL_QWEN_FLASH: str = "avalai/qwen-flash"
+    MDL_GEMINI_FLASH: str = "avalai/gemini-2.0-flash-lite"
+
+    # --- CLOUDFLARE (Free) ---
+    MDL_CF_LLAMA_3: str = "cloudflare/@cf/meta/llama-3-8b-instruct"
+
+    # --- OPENROUTER (Free Backup) ---
+    MDL_OR_MISTRAL: str = "openrouter/mistralai/mistral-small-3.1-24b-instruct:free"
+
+    # =========================================================
+    #  ROLE ASSIGNMENTS (The Brains of the Operation)
+    # =========================================================
+
+    # 1. ARCHITECT
+    # Needs: Strict JSON adherence and logical planning.
+    # Selection: Gemini Flash Lite is excellent at JSON structure.
+    MODEL_ARCHITECT: str = MDL_GEMINI_FLASH
+
+    # 2. HUNTER
+    # Needs: Speed and ability to generate creative search queries.
+    # Selection: Gemma 3 12B is very fast and creative.
+    MODEL_HUNTER_QUERY: str = MDL_GEMMA_3_12B
+
+    # 3. ANALYST
+    # Needs: Reading comprehension and high-quality writing.
+    # Selection: Nemotron 70B is a "super" model. It writes better reports than 8B models.
+    MODEL_ANALYST: str = MDL_NEMOTRON_70B
+
+    # 4. MODERATOR
+    # Needs: Large context window (to read all reports) and synthesis skills.
+    # Selection: Gemini Flash Lite has a huge context window and is very stable.
+    MODEL_MODERATOR: str = MDL_GEMINI_FLASH
+
+    # =========================================================
 
     # --- EMBEDDINGS ---
     EMBEDDING_DIMENSION: int = 768
@@ -38,4 +77,4 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return Settings() # pyright: ignore[reportCallIssue]
