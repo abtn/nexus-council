@@ -67,8 +67,8 @@ class Settings(BaseSettings):
     # =========================================================
 
     # --- EMBEDDINGS ---
-    EMBEDDING_DIMENSION: int = 768
-    EMBEDDING_MODEL: str = "nomic-embed-text"
+    EMBEDDING_DIMENSION: int = 384 
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
 
     model_config = SettingsConfigDict(
         env_file=".env",

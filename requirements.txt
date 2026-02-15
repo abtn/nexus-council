@@ -15,11 +15,14 @@ redis==5.0.1
 
 # AI & External Tools
 openai==1.10.0
-# tavily-python  <-- We will use raw requests or httpx for now to keep it explicit
+tavily-python==0.3.3
+trafilatura==1.6.2
+
+# --- Embeddings & Dashboard ---
+sentence-transformers==2.5.1
+streamlit==1.32.0
+watchdog==4.0.0
 
 # Utilities
 python-dotenv==1.0.0
 httpx==0.26.0
-
-tavily-python==0.3.3
-trafilatura==1.6.2
