@@ -1,18 +1,13 @@
-# Python environments
-venv
-.venv
-env
-
-# Cache and heavy files
 __pycache__
 *.pyc
-.git
-.idea
-.vscode
-
-# CRITICAL: Do not copy the model cache into the build context
-# We want the container to download its own or use the volume mount
-model_cache
-
-# Postgres data
-postgres_data
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.git/
+.gitignore
+postgres_data/
+docker-compose.yml
+readme.md
