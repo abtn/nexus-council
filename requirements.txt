@@ -19,7 +19,6 @@ tavily-python==0.3.3
 trafilatura==1.6.2
 
 # --- Embeddings & Dashboard ---
-sentence-transformers==2.5.1
 streamlit==1.32.0
 watchdog==4.0.0
 

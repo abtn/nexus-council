@@ -28,38 +28,59 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/nexus_council
       - REDIS_URL=redis://redis:6379/0
     volumes:
-      - ./model_cache:/root/.cache/torch/sentence_transformers # <--- ADDED
+      - ./model_cache:/root/.cache/torch/sentence_transformers
     depends_on:
       postgres:
         condition: service_healthy
+    # Healthcheck ensures the API is ready to accept connections
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   worker:
     build: .
     container_name: nexus_worker
     command: celery -A app.workers.celery_app worker --loglevel=info
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/nexus_council
       - REDIS_URL=redis://redis:6379/0
     volumes:
-      - ./model_cache:/root/.cache/torch/sentence_transformers # <--- ADDED
+      - ./model_cache:/root/.cache/torch/sentence_transformers
     depends_on:
       - api
       - redis
-        
+
   dashboard:
     build: .
     container_name: nexus_dashboard
     command: streamlit run dashboard/app.py --server.port=8501 --server.address=0.0.0.0
     ports:
       - "8501:8501"
+    env_file:
+      - .env
     environment:
       - BACKEND_URL=http://api:8000
+    # Wait for API to pass healthcheck before starting Dashboard
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+
+# Fix for SSL/Connection issues in WSL2
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1350

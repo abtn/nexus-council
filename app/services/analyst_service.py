@@ -15,14 +15,17 @@ class AnalystService:
         self.embedder = EmbeddingService()
 
     async def generate_report(self, agent_id: str, db: AsyncSession) -> ExpertReport:
+        # 1. Fetch Agent
         agent = await db.get(AgentPersona, agent_id)
         if not agent:
             raise ValueError("Agent not found")
 
-        # 1. Embed the Agent's perspective (role) to find relevant chunks
+        # 2. Embed the Agent's perspective (role) to find relevant chunks
         query_vector = self.embedder.embed_query(agent.role_description)
         
-        # 2. Vector Search (Cosine Distance)
+        # 3. Vector Search (Cosine Distance)
+        # We use str(query_vector) because asyncpg requires a string representation 
+        # for vector types when using raw SQL text queries.
         sql = text("""
             SELECT content, source_url 
             FROM knowledge_items 
@@ -31,15 +34,20 @@ class AnalystService:
             LIMIT 10
         """)
         
-        result = await db.execute(sql, {"agent_id": str(agent_id), "query_vector": query_vector})
-
+        result = await db.execute(
+            sql, 
+            {
+                "agent_id": str(agent_id), 
+                "query_vector": str(query_vector)
+            }
+        )
         relevant_rows = result.fetchall()
 
         if not relevant_rows:
             logger.warning(f"No knowledge found for agent {agent.name}")
             content = "No external information was found. I am unable to provide a report."
         else:
-            # 3. Prepare Context
+            # 4. Prepare Context
             context_text = ""
             for row in relevant_rows:
                 # row[0] is content, row[1] is source_url
@@ -64,12 +72,14 @@ class AnalystService:
             
             logger.info(f"Agent {agent.name} is analyzing research data...")
             
+            # 5. Generate
             content = await self.llm.generate(
                 prompt=prompt,
                 system_prompt="You are a specialized AI analyst. Be objective, thorough, and precise.",
                 model_id=settings.MODEL_ANALYST
             )
 
+        # 6. Save Report
         report = ExpertReport(agent_id=agent.id, content=content)
         db.add(report)
         

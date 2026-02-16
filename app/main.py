@@ -23,8 +23,17 @@ async def create_council(
     db: AsyncSession = Depends(get_db)
 ):
     architect = ArchitectService()
+    # 1. Design the council (adds Session and Agents to the transaction)
     session = await architect.design_council(request.prompt, db)
+    
+    # 2. CRITICAL FIX: Commit the transaction explicitly before starting the worker.
+    # This prevents the race condition where the worker starts before data is saved.
+    await db.commit()
+    await db.refresh(session)
+
+    # 3. Trigger the Hunter tasks
     initiate_hunt.delay(str(session.id))
+    
     return SessionCreateResponse(session_id=session.id, status="PROCESSING")
 
 @app.get("/api/council/{session_id}", response_model=SessionDetailResponse)
