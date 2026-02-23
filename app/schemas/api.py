@@ -34,6 +34,12 @@ class ExpertDefinition(BaseModel):
     initial_search_queries: List[str]
     brain_tier: str = "economy"
 
+class ModeratorDecision(BaseModel):
+    """Schema for the final synthesized output of the council."""
+    consensus: str = Field(..., description="The agreed-upon answer or executive summary.")
+    friction: str = Field(..., description="Points where experts disagreed, data was missing, or conflicting views arose.")
+    recommendation: str = Field(..., description="Final actionable advice and takeaways.")
+
 class ArchitectDecision(BaseModel):
     experts: List[ExpertDefinition] = Field(..., min_length=1, max_length=10)
 

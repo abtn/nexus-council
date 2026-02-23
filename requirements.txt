@@ -1,27 +1,29 @@
 # Web & API
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-pydantic==2.5.3
-pydantic-settings==2.1.0
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.3
+pydantic-settings>=2.1.0
 
 # Database & Vector Store
-sqlalchemy[asyncio]==2.0.25
-asyncpg==0.29.0
-pgvector==0.2.4
+sqlalchemy[asyncio]>=2.0.25
+asyncpg>=0.29.0
+pgvector>=0.2.4
 
 # Task Queue
-celery[redis]==5.3.6
-redis==5.0.1
+celery[redis]>=5.3.6
+redis>=5.0.1
 
 # AI & External Tools
-openai==1.10.0
-tavily-python==0.3.3
-trafilatura==1.6.2
+openai>=1.40.0
+tavily-python>=0.3.3
+trafilatura>=1.6.2
+instructor>=1.3.0
 
 # --- Embeddings & Dashboard ---
-streamlit==1.32.0
-watchdog==4.0.0
+# UPGRADED: Streamlit 1.36+ supports modern Pandas/Numpy
+streamlit>=1.36.0
+watchdog>=4.0.0
 
 # Utilities
-python-dotenv==1.0.0
-httpx==0.26.0
+python-dotenv>=1.0.0
+httpx>=0.26.0
