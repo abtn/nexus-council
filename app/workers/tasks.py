@@ -2,7 +2,7 @@ import asyncio
 from celery import chord
 from app.workers.celery_app import celery_app
 from app.core.database import AsyncSessionLocal
-from app.models.domain import AgentPersona, KnowledgeItem, CouncilSession
+from app.models.domain import AgentPersona, KnowledgeItem, CouncilSession, ExpertReport
 from app.services.tools import WebTools
 from app.services.analyst_service import AnalystService
 from app.services.embedding_service import EmbeddingService
@@ -14,6 +14,50 @@ logger = logging.getLogger(__name__)
 
 def run_async(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
+
+@celery_app.task(name="tasks.finalize_quick_session")
+def finalize_quick_session(result, session_id: str):
+    """
+    Finalizes a Quick Mode session by copying the agent's report 
+    directly to the consensus field. No Moderator needed.
+    """
+    async def _finalize():
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy import select
+            
+            # 1. Get the session
+            session = await db.get(CouncilSession, session_id)
+            if not session:
+                return
+
+            # 2. Get the single agent's report (Quick mode only has 1 agent)
+            # We join AgentPersona to ensure we get the report for this session
+            stmt = (
+                select(ExpertReport)
+                .join(AgentPersona)
+                .where(AgentPersona.session_id == session_id)
+            )
+            report_result = await db.execute(stmt)
+            report = report_result.scalars().first()
+
+            if report:
+                # 3. Copy report content to Consensus (The "Answer")
+                session.consensus = report.content
+                session.status = "COMPLETED"
+                
+                # Optional: Clear friction/recommendation if they exist, 
+                # as they don't apply to a single direct answer
+                session.friction = None
+                session.recommendation = None
+                
+                await db.commit()
+                logger.info(f"Quick Session {session_id} finalized successfully.")
+            else:
+                logger.error(f"Quick Session {session_id} failed: No report found.")
+                session.status = "FAILED"
+                await db.commit()
+
+    return run_async(_finalize())
 
 @celery_app.task(name="tasks.initiate_hunt")
 def initiate_hunt(session_id: str):
@@ -35,17 +79,34 @@ def initiate_hunt(session_id: str):
             model_config = session.model_config if session.model_config else None
 
             search_tasks = [
-                execute_expert_search.s( # pyright: ignore[reportFunctionMemberAccess]
+                execute_expert_search.s(
                     str(agent.id),
                     agent.search_queries or [],
                     session.enable_search,
-                    model_config  # Pass dict here
+                    model_config
                 )
                 for agent in agents
             ]
 
-            workflow = chord(search_tasks, synthesize_council.s(session_id)) # pyright: ignore[reportFunctionMemberAccess]
-            workflow.apply_async()
+            # =========================================================
+            # BRANCHING LOGIC
+            # =========================================================
+            
+            if session.mode == "quick":
+                # QUICK MODE: Run agent, then finalize. NO MODERATOR.
+                # Since there is only 1 agent in quick mode, we link the finalizer
+                # to the first (and only) task.
+                if search_tasks:
+                    # Run the agent task, and link the finalizer to run after it finishes
+                    search_tasks[0].apply_async(link=finalize_quick_session.s(session_id))
+                    logger.info(f"Quick workflow initiated for session {session_id}")
+            
+            else:
+                # STANDARD / DECOMPOSITION MODE: Run agents, THEN Moderator (Synthesize).
+                from celery import chord
+                workflow = chord(search_tasks, synthesize_council.s(session_id))
+                workflow.apply_async()
+                logger.info(f"Standard/Decomposition workflow initiated for session {session_id}")
 
     return run_async(_prepare_workflow())
 
