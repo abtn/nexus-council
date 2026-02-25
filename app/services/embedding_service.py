@@ -1,3 +1,4 @@
+import asyncio # 1. Import asyncio
 from sentence_transformers import SentenceTransformer
 from app.core.config import get_settings
 import logging
@@ -16,11 +17,16 @@ class EmbeddingService:
     def __init__(self):
         self.model = get_embedding_model()
 
-    def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        if not texts: 
+    async def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
             return []
-        embeddings = self.model.encode(texts, show_progress_bar=False)
+        
+        # 2. Run the blocking model.encode in a separate thread to unblock the event loop
+        loop = asyncio.get_running_loop()
+        embeddings = await loop.run_in_executor(None, self.model.encode, texts)
+        
         return [emb.tolist() for emb in embeddings]
 
-    def embed_query(self, text: str) -> list[float]:
-        return self.embed_texts([text])[0]
+    async def embed_query(self, text: str) -> list[float]:
+        # 3. Update to await the async method
+        return (await self.embed_texts([text]))[0]

@@ -21,7 +21,8 @@ class AnalystService:
             raise ValueError("Agent not found")
 
         # 2. Embed the Agent's perspective (role)
-        query_vector = self.embedder.embed_query(agent.role_description)
+        # Await the async embedding call
+        query_vector = await self.embedder.embed_query(agent.role_description)
 
         # 3. Vector Search
         sql = text("""

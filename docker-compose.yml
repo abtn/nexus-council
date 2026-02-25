@@ -38,7 +38,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # Healthcheck ensures the API is ready to accept connections
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
       interval: 10s
@@ -48,7 +47,8 @@ services:
   worker:
     build: .
     container_name: nexus_worker
-    command: celery -A app.workers.celery_app worker --loglevel=info
+    # NEW COMMAND: Runs ARQ worker instead of Celery
+    command: arq app.workers.arq_worker.WorkerSettings
     env_file:
       - .env
     environment:
@@ -70,7 +70,6 @@ services:
       - .env
     environment:
       - BACKEND_URL=http://api:8000
-    # Wait for API to pass healthcheck before starting Dashboard
     depends_on:
       api:
         condition: service_healthy
