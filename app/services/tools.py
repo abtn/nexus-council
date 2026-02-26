@@ -1,3 +1,4 @@
+import asyncio
 from tavily import TavilyClient
 from trafilatura import extract
 from app.core.config import get_settings
@@ -16,24 +17,37 @@ class WebTools:
         Tavily Pro provides raw content, but we will scrape manually for higher quality.
         """
         logger.info(f"Searching Tavily for: {query}")
-        # Tavily search is synchronous in the SDK, wrap if needed or run in thread
-        # For async FastAPI, running sync IO in a thread pool is safer, 
-        # but here we keep it simple for the prototype.
-        results = self.tavily.search(query=query, max_results=max_results, include_raw_content=False)
+        
+        # --- FIXED: Non-blocking execution ---
+        results = await asyncio.to_thread(
+            self.tavily.search, query=query, max_results=max_results, include_raw_content=False
+        )
         
         return [r for r in results.get("results", [])]
 
     async def scrape(self, url: str) -> str | None:
         """
         Downloads and extracts clean text from a URL.
+        Uses browser headers to bypass VPN blocks.
         """
         import httpx
         logger.info(f"Scraping: {url}")
+        
+        # Define headers to mimic a real browser (Chrome on Windows)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1"
+        }
+
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
                 response = await client.get(url, follow_redirects=True)
                 response.raise_for_status()
-            
+
             # Trafilatura extracts the main text content
             text = extract(response.content)
             return text

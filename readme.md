@@ -1,4 +1,4 @@
-# 🏛️ Nexus Council v2.0
+# 🏛️ Nexus Council v2.1
 
 [![Python](https://img.shields.io/badge/Python-3.10-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -8,29 +8,24 @@
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-> **Multi-Modal AI Research Orchestration Platform**
+> **Resilient Multi-Modal AI Research Orchestration Platform**
 
-Nexus Council is a sophisticated autonomous "Council of Experts" system that mimics high-level human research and debate processes. It orchestrates multiple specialized AI agents to solve complex queries through parallel research, synthesis, and consensus-building.
+Nexus Council is an advanced autonomous system that orchestrates a "Council of Experts" to solve complex queries. It utilizes parallel asynchronous agents to perform research, synthesis, and consensus-building, with robust error handling and multi-provider support.
 
 ---
 
-## 🚀 What's New in v2.0
+## 🚀 What's New in v2.1
 
-### Multi-Mode Operation
-- **🏛️ Standard Council**: Parallel experts research single topic from different perspectives
-- **🔬 Decomposition Mode**: Complex queries broken into sub-queries, researched in parallel, then synthesized
-- **⚡ Quick Mode**: Direct LLM answers without web search for rapid responses
+### 🛡️ Enhanced Resilience & Compatibility
+*   **Universal LLM Support:** Refactored provider architecture (`OpenAIStrategy`) to support any OpenAI-compatible API (AvalAI, OpenRouter, vLLM) with a single codebase.
+*   **Intelligent Fallbacks:**
+    *   **JSON Mode Fallback:** If a provider doesn't support structured JSON (e.g., Cloudflare), the system automatically switches to prompt engineering to extract structured data.
+    *   **System Role Fallback:** If a model rejects the `system` role (e.g., AvalAI Gemma), the system automatically merges instructions into the user prompt.
+*   **VPN/Anti-Scraping Resilience:** Updated scraping logic to use browser spoofing headers, significantly reducing `403 Forbidden` errors when operating behind VPNs or restricted networks.
 
-### Granular Configuration
-- **Per-Role Model Selection**: Choose different models for Architect, Hunter, Analyst, and Moderator
-- **Tone & Length Control**: Academic, Business, Technical, or Casual tones with variable output lengths
-- **Search Toggle**: Enable/disable web search on demand
-
-### Enhanced Dashboard
-- **Clickable Session History**: Browse and reload past research sessions
-- **Real-time Progress Tracking**: Visual progress bars and agent status indicators
-- **Export Options**: Copy to clipboard, download JSON, or export Markdown reports
-- **Persistent Results**: Results survive page refreshes and remain accessible
+### 🎛️ Dashboard Improvements
+*   **Session History:** Browse and reload previous research sessions directly from the UI.
+*   **Granular Control:** Select different models for specific roles (Architect, Hunter, Analyst, Moderator).
 
 ---
 
@@ -38,81 +33,71 @@ Nexus Council is a sophisticated autonomous "Council of Experts" system that mim
 
 | Feature | Description |
 |---------|-------------|
-| **Autonomous Architecture** | AI "Architect" designs bespoke teams of 3-5 experts tailored to your prompt |
-| **Parallel Research** | AI "Hunters" perform real-time web research simultaneously using Tavily and Trafilatura |
-| **Local RAG** | High-speed local embeddings using `all-MiniLM-L6-v2` and `pgvector` for intelligent data retrieval |
-| **Conflict Resolution** | "Moderator" analyzes expert reports to identify "Friction Points" and provide nuanced consensus |
-| **Multi-Provider LLM Support** | AvalAI, Cloudflare, OpenRouter with dynamic model selection per role |
-| **Real-time Dashboard** | Streamlit-based UI with session history, progress tracking, and result export |
+| **Autonomous Architecture** | AI "Architect" dynamically assembles a team of 3-5 experts tailored to your query (Standard, Decomposition, or Quick modes). |
+| **Parallel Research** | Agents research simultaneously using Tavily search and Trafilatura scraping. |
+| **Local RAG** | High-performance vector search using `pgvector` and `sentence-transformers` for context retrieval. |
+| **Conflict Resolution** | "Moderator" analyzes conflicting reports to identify "Friction Points" and build a final consensus. |
+| **Multi-Provider Strategy** | Seamlessly routes requests between AvalAI, Cloudflare Workers AI, and OpenRouter based on availability and capability. |
 
 ---
 
 ## 🛠️ Tech Stack
 
 ### Backend
-- **FastAPI**: High-performance async API framework
-- **SQLAlchemy 2.0**: Async ORM with PostgreSQL
-- **Pydantic V2**: Data validation and serialization
-- **Celery + Redis**: Distributed task queue for parallel processing
-- **pgvector**: Vector similarity search in PostgreSQL
+*   **FastAPI:** High-performance async web framework.
+*   **SQLAlchemy 2.0:** Async ORM with PostgreSQL.
+*   **ARQ:** Fast, async job queue built on Redis (replacing Celery for pure Python async performance).
+*   **pgvector:** Vector similarity search extension for PostgreSQL.
 
 ### Intelligence Layer
-- **Multi-Provider LLMs**: AvalAI, Cloudflare Workers AI, OpenRouter
-- **Local Embeddings**: Sentence-Transformers (CPU-optimized)
-- **Web Scraping**: Tavily API + Trafilatura for content extraction
+*   **LLM Providers:** AvalAI (Gemma, Flash), Cloudflare (Llama 3), OpenRouter.
+*   **Instructor:** Structured output generation library (with custom fallbacks).
+*   **Embeddings:** `sentence-transformers` (CPU-optimized).
 
 ### Frontend
-- **Streamlit**: Interactive data apps with pure Python
-- **Real-time Polling**: Live status updates without page refresh
+*   **Streamlit:** Real-time interactive dashboard with session management.
 
 ### Infrastructure
-- **Docker Compose**: Complete containerized stack
-- **PostgreSQL 16 + pgvector**: Vector-enabled database
-- **Redis**: Message broker and result backend
+*   **Docker Compose:** Complete containerized deployment.
+*   **Redis:** Message broker and caching layer.
 
 ---
 
 ## 📦 Quick Start
 
 ### Prerequisites
-- Docker and Docker Compose
-- API keys for: AvalAI, Tavily, (optional) Cloudflare, OpenRouter
+*   Docker & Docker Compose.
+*   API Keys for **AvalAI**, **Tavily**, and optionally **Cloudflare**/**OpenRouter**.
 
-### 1. Clone and Configure
-
+### 1. Clone & Configure
 ```bash
-git clone https://github.com/yourusername/nexus-council.git
+git clone https://github.com/abtn/nexus-council.git
 cd nexus-council
-
-# Create environment file
 cp .env.example .env
-
-# Edit .env with your API keys
-nano .env
+nano .env  # Add your API keys
 ```
 
 ### 2. Environment Variables
-
 ```env
 # Required
-AVALAI_API_KEY=your_avalai_key_here
-TAVILY_API_KEY=your_tavily_key_here
+AVALAI_API_KEY=your_key_here
+TAVILY_API_KEY=your_key_here
 
-# Optional (for additional providers)
-CF_ACCOUNT_ID=your_cloudflare_account_id
-CF_API_TOKEN=your_cloudflare_token
-OPENROUTER_API_KEY=your_openrouter_key
+# Optional (Cloudflare)
+CF_ACCOUNT_ID=your_account_id
+CF_API_TOKEN=your_token
 
-# Infrastructure (defaults work with docker-compose)
+# Optional (OpenRouter)
+OPENROUTER_API_KEY=your_key
+
+# Infrastructure (Defaults usually fine for Docker)
 DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/nexus_council
 REDIS_URL=redis://redis:6379/0
 ```
 
 ### 3. Launch
-
 ```bash
-# Clean start (removes old data)
-docker-compose down -v
+# Build and start all services
 docker-compose up --build -d
 
 # View logs
@@ -120,126 +105,97 @@ docker-compose logs -f api worker
 ```
 
 ### 4. Access
-
-- **Dashboard**: http://localhost:8501
-- **API Docs**: http://localhost:8000/docs
-- **API**: http://localhost:8000
+*   **Dashboard:** http://localhost:8501
+*   **API Docs:** http://localhost:8000/docs
 
 ---
 
 ## 🎮 Usage Guide
 
-### Standard Mode (Balanced Research)
-1. Select "🏛️ Standard Council" mode
-2. Enable web search for current data
-3. Choose your preferred models per role
-4. Enter a complex query
-5. Track progress in real-time
-6. Review consensus, friction points, and recommendations
+### 1. Select Strategy
+*   **Standard Council:** Creates diverse experts (Historian, Economist, etc.) for a broad overview.
+*   **Decomposition:** Breaks complex queries into sub-queries for deep analysis.
+*   **Quick:** Direct LLM answer without web search (fastest).
 
-### Decomposition Mode (Deep Investigation)
-1. Select "🔬 Decomposition" mode
-2. Set research angles (2-5 sub-queries)
-3. Each angle gets parallel research
-4. Final synthesis combines all findings
-5. Best for broad topics requiring comprehensive coverage
+### 2. Configure Models
+*   **Architect:** Needs strong logic (Recommend: `avalai/gemini-2.0-flash-lite`).
+*   **Moderator:** Needs large context window to read all reports (Recommend: `avalai/gemma-3-27b-it`).
+*   *Note:* Cloudflare models are great for speed but may trigger fallbacks for complex JSON tasks.
 
-### Quick Mode (Fast Answers)
-1. Select "⚡ Quick Answer" mode
-2. Web search automatically disabled
-3. Single expert provides direct answer
-4. Best for straightforward questions or when speed matters
+### 3. Analyze Results
+*   **Consensus:** The agreed-upon executive summary.
+*   **Friction:** Disagreements between experts or missing data.
+*   **Recommendations:** Actionable advice.
 
 ---
 
 ## 🔧 Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Dashboard     │────▶│   FastAPI        │────▶│   PostgreSQL    │
-│   (Streamlit)   │     │   (Orchestrator) │     │   + pgvector    │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-                               │                           │
-                               ▼                           ▼
-                        ┌──────────────┐          ┌──────────────┐
-                        │    Celery    │          │   Knowledge  │
-                        │    Workers   │          │   Storage    │
-                        └──────────────┘          └──────────────┘
-                               │
-                               ▼
-                        ┌──────────────┐
-                        │    Redis     │
-                        │   (Broker)   │
-                        └──────────────┘
+┌─────────────┐
+│  Dashboard  │ (Streamlit)
+└──────┬──────┘
+       │ HTTP/JSON
+       ▼
+┌─────────────────┐       ┌──────────────┐
+│   FastAPI       │────▶ │  PostgreSQL  │
+│   (Orchestrator)│       │  + pgvector  │
+└────────┬────────┘       └──────────────┘
+         │
+         ▼
+┌─────────────────┐
+│     Redis       │ (Broker)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  ARQ Workers    │
+│  (Async Jobs)   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────┐
+│      External Services          │
+│  ┌──────────┐  ┌─────────────┐  │
+│  │ Tavily   │  │  LLMs       │  │
+│  │ (Search) │  │  (AvalAI/   │  │
+│  └──────────┘  │   CF/OR)    │  │
+│                └─────────────┘  │
+└─────────────────────────────────┘
 ```
-
-### Data Flow
-1. **Request**: Dashboard → API creates `CouncilSession` with config
-2. **Architect**: AI designs expert team based on mode and query
-3. **Parallel Research**: Celery workers execute search + analysis concurrently
-4. **Synthesis**: Moderator combines all reports into final output
-5. **Storage**: Results persisted with full history and metadata
-
----
-
-## 🌟 Performance Optimizations
-
-- **CPU-Optimized Docker**: Custom build logic prevents WSL2 crashes with CPU-only Torch
-- **WSL2 Networking**: Custom MTU settings prevent SSL/EOF connection errors
-- **Model Caching**: Pre-downloaded embeddings in Docker image layer
-- **Connection Pooling**: Async SQLAlchemy with proper session management
-- **Rate Limiting**: Celery task rate limits prevent API throttling
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### Error: `403 Forbidden` during scraping
+*   **Cause:** Websites blocking VPN/Data-center IPs.
+*   **Fix:** The system now uses browser headers to spoof requests. If some sites still fail, they are likely hard-blocked. The system logs the failure and continues with other sources.
 
-**Issue**: `Moderation failed: 'list' object has no attribute 'get'`
-- **Fix**: Update to latest version - LLM response parsing now handles arrays gracefully
+### Error: `413 Payload Too Large`
+*   **Cause:** Using Cloudflare (which has smaller input limits) as the **Moderator** for long reports. The fallback prompt (Schema + Reports) becomes too large.
+*   **Fix:** Switch the **Moderator** model to `avalai/gemma-3-27b-it` or `avalai/gemini-2.0-flash-lite` in the sidebar settings. These have larger context windows.
 
-**Issue**: Workers fail to connect to PostgreSQL
-- **Fix**: Ensure `DATABASE_URL` uses `postgres` hostname (not localhost) in Docker
+### Error: `Developer instruction is not enabled`
+*   **Cause:** Using AvalAI Gemma models which reject the standard `system` message role.
+*   **Fix:** The system handles this automatically by merging the system prompt into the user prompt. You can ignore this warning in logs.
 
-**Issue**: Embedding model not found
-- **Fix**: Model is pre-downloaded in Dockerfile; check volume mounts in docker-compose.yml
-
-**Issue**: API returns 422 validation errors
-- **Fix**: Ensure dashboard and backend schemas match (see `app/schemas/api.py`)
-
-### Debug Mode
-
-```bash
-# View detailed logs
-docker-compose logs -f worker | grep -E "(ERROR|INFO|Agent)"
-
-# Check database
-docker-compose exec postgres psql -U postgres -d nexus_council -c "SELECT id, status, mode FROM council_sessions ORDER BY created_at DESC LIMIT 5;"
-
-# Restart specific service
-docker-compose restart worker
-```
+### Worker not processing tasks?
+*   Check Redis connection: `docker-compose logs redis`.
+*   Check worker logs: `docker-compose logs worker`.
 
 ---
 
 ## 🤝 Contributing
-
-Contributions welcome! Areas for improvement:
-- Additional LLM providers (Anthropic, OpenAI, local models)
-- Enhanced embedding models
-- WebSocket support for real-time updates
-- Persistent session storage (currently in-memory only)
-- Multi-language support
+Contributions welcome! Priority areas:
+*   Additional LLM provider integrations (Anthropic, Local Ollama).
+*   Enhanced scraping bypasses (Selenium/Playwright fallback).
+*   WebSocket support for real-time dashboard updates.
 
 ---
-
 
 ## 🙏 Acknowledgments
-
-- [FastAPI](https://fastapi.tiangolo.com/)
-- [Streamlit](https://streamlit.io/)
-- [Sentence-Transformers](https://www.sbert.net/)
-- [Tavily](https://tavily.com/)
-
----
+*   [FastAPI](https://fastapi.tiangolo.com/)
+*   [Streamlit](https://streamlit.io/)
+*   [Instructor](https://instructor.site/)
+*   [Tavily](https://tavily.com/)
