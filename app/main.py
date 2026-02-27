@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Depends, HTTPException
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text, select
 from sqlalchemy.orm import selectinload
@@ -12,17 +13,33 @@ from app.models.domain import CouncilSession
 from app.services.architect_service import ArchitectService
 import uuid
 
-app = FastAPI(title="Nexus Council v2")
+settings = get_settings()
 
-@app.on_event("startup")
-async def startup():
+# =========================================================
+# LIFESPAN MANAGER (Startup / Shutdown)
+# =========================================================
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 1. Database Startup
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
+    
+    # 2. Global Redis Pool Startup
+    # Initialize the pool once and store in app.state
+    app.state.redis = await create_pool(RedisSettings.from_dsn(settings.REDIS_URL))
+    
+    yield # App runs here
+    
+    # 3. Shutdown Cleanup
+    await app.state.redis.close()
+
+# Apply lifespan to the app
+app = FastAPI(title="Nexus Council v2.1", lifespan=lifespan)
 
 @app.post("/api/council", response_model=SessionCreateResponse)
-async def create_council(request: SessionCreateRequest, db: AsyncSession = Depends(get_db)):
-    
+async def create_council(request: SessionCreateRequest, req: Request, db: AsyncSession = Depends(get_db)):
+
     # 1. Create Session Record with Config
     session = CouncilSession(
         user_prompt=request.prompt,
@@ -34,7 +51,7 @@ async def create_council(request: SessionCreateRequest, db: AsyncSession = Depen
         status="PROCESSING"
     )
     db.add(session)
-    await db.flush() 
+    await db.flush()
 
     # 2. Architect Strategy (Handles Standard vs Decomposition)
     architect = ArchitectService()
@@ -43,25 +60,21 @@ async def create_council(request: SessionCreateRequest, db: AsyncSession = Depen
     # Commit changes to DB
     await db.commit()
 
-    # 3. Trigger Workers (ARQ implementation)
-    
-    # Create Redis connection
-    redis = await create_pool(RedisSettings.from_dsn(get_settings().REDIS_URL))
+    # 3. Trigger Workers (Using Global Pool)
     
     # CRITICAL FIX: Re-fetch session using selectinload to ensure agents are loaded
-    # We cannot rely on lazy loading in async code.
     result = await db.execute(
         select(CouncilSession)
         .where(CouncilSession.id == session.id)
-        .options(selectinload(CouncilSession.agents)) # <--- Forces loading of agents immediately
+        .options(selectinload(CouncilSession.agents))
     )
     session = result.scalars().first()
-    
+
     if not session:
-        await redis.close()
         raise HTTPException(status_code=404, detail="Session lost after creation")
 
-    # Now we can safely iterate agents without triggering a lazy load error
+    # Retrieve the global pool from app.state
+    redis = req.app.state.redis
     model_config = session.model_config
 
     for agent in session.agents:
@@ -72,11 +85,11 @@ async def create_council(request: SessionCreateRequest, db: AsyncSession = Depen
             session.enable_search,
             model_config
         )
-    
-    await redis.close()
+
+    # NO need to close pool here; it lives for the app lifetime
 
     return SessionCreateResponse(
-        session_id=session.id, 
+        session_id=session.id,
         status="PROCESSING",
         mode=session.mode
     )
